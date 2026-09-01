@@ -1,0 +1,21 @@
+services:
+  app:
+    build: ./app
+    ports:
+      - "3002:3000" # host 3002 -- MCPHub owns 3000, the real-estate demo owns 3001
+    environment:
+      PORT: "3000"
+      # Neon (remote, pooled) -- no local postgres container for this app,
+      # unlike the real-estate demo.
+      DATABASE_URL: ${DATABASE_URL}
+      # Public Dex URL for both discovery and token exchange -- see auth.js's
+      # docblock on initOidcClient for why (this container isn't on the same
+      # Docker network as the Dex instance, unlike the real-estate demo's app).
+      OIDC_DISCOVERY_URL: https://dexauth.authio.ai/dex
+      OIDC_CLIENT_ID: pos-app
+      OIDC_CLIENT_SECRET: ${POS_DEX_CLIENT_SECRET}
+      # Browser-facing, via the same Cloudflare tunnel as the other demo apps.
+      # Must be one of dex-oidc-realestate-demo/dex/config.yaml.template's
+      # pos-app staticClients redirectURIs.
+      OIDC_REDIRECT_URI: https://posdemo.authio.ai/callback
+      SESSION_SECRET: ${SESSION_SECRET}

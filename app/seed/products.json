@@ -1,0 +1,14 @@
+[
+  { "sku": "BEV-001", "name": "Filter Coffee (250g)", "category": "Beverages", "price_cents": 45000, "stock_qty": 40 },
+  { "sku": "BEV-002", "name": "Green Tea (20 bags)", "category": "Beverages", "price_cents": 22000, "stock_qty": 60 },
+  { "sku": "BEV-003", "name": "Orange Juice (1L)", "category": "Beverages", "price_cents": 18000, "stock_qty": 35 },
+  { "sku": "SNK-001", "name": "Masala Chips (150g)", "category": "Snacks", "price_cents": 9000, "stock_qty": 80 },
+  { "sku": "SNK-002", "name": "Roasted Almonds (200g)", "category": "Snacks", "price_cents": 35000, "stock_qty": 25 },
+  { "sku": "SNK-003", "name": "Digestive Biscuits", "category": "Snacks", "price_cents": 6000, "stock_qty": 90 },
+  { "sku": "GRO-001", "name": "Basmati Rice (5kg)", "category": "Groceries", "price_cents": 65000, "stock_qty": 20 },
+  { "sku": "GRO-002", "name": "Toor Dal (1kg)", "category": "Groceries", "price_cents": 15000, "stock_qty": 50 },
+  { "sku": "GRO-003", "name": "Sunflower Oil (1L)", "category": "Groceries", "price_cents": 21000, "stock_qty": 30 },
+  { "sku": "HHD-001", "name": "Dish Wash Liquid (500ml)", "category": "Household", "price_cents": 12000, "stock_qty": 45 },
+  { "sku": "HHD-002", "name": "Laundry Detergent (1kg)", "category": "Household", "price_cents": 28000, "stock_qty": 30 },
+  { "sku": "STA-001", "name": "A4 Notebook (200 pages)", "category": "Stationery", "price_cents": 8000, "stock_qty": 100 }
+]

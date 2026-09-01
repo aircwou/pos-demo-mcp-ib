@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>POS Demo — Manager</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .meta { color: #666; font-size: 0.85rem; }
+        button, a.button { cursor: pointer; background: #111; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+        button.danger { background: #b3261e; }
+        .who { display: flex; align-items: center; gap: 0.5rem; }
+        .avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+        form.inline { display: inline; }
+        .nav-links { margin-bottom: 1.5rem; display: flex; gap: 1rem; }
+        .add-form { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-top: 2rem; }
+        .add-form input { display: block; width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; box-sizing: border-box; }
+        .edit-fields input { width: 5rem; padding: 0.3rem; margin-right: 0.3rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📋 Manager Dashboard</h1>
+        <span class="who">
+            <% if (user.picture) { %><img class="avatar" src="<%= user.picture %>" alt=""><% } %>
+            Signed in as <%= user.name || user.email %> (<%= user.role %>) · <a href="/logout">Sign out</a>
+        </span>
+    </header>
+
+    <div class="nav-links">
+        <a class="button" href="/">Checkout screen</a>
+        <a class="button" href="/sales">All sales</a>
+        <a class="button" href="/reports/summary">Sales report</a>
+    </div>
+
+    <h2>Products</h2>
+    <% products.forEach(p => { %>
+        <div class="card">
+            <form class="edit-fields" method="POST" action="/products/<%= p.id %>/update">
+                <strong><%= p.name %></strong> <span class="meta">(<%= p.sku %>)</span><br>
+                <input type="text" name="name" value="<%= p.name %>" required>
+                <input type="text" name="category" value="<%= p.category %>" required>
+                <input type="number" name="price_cents" value="<%= p.price_cents %>" required title="Price in cents">
+                <input type="number" name="stock_qty" value="<%= p.stock_qty %>" required title="Stock quantity">
+                <button type="submit">Save</button>
+            </form>
+            <form class="inline" method="POST" action="/products/<%= p.id %>/delete" onsubmit="return confirm('Remove <%= p.name %>?')">
+                <button type="submit" class="danger">Remove</button>
+            </form>
+        </div>
+    <% }) %>
+
+    <div class="add-form">
+        <h3>Add a product</h3>
+        <form method="POST" action="/products">
+            <input type="text" name="sku" placeholder="SKU (e.g. SNK-004)" required>
+            <input type="text" name="name" placeholder="Product name" required>
+            <input type="text" name="category" placeholder="Category" required>
+            <input type="number" name="price_cents" placeholder="Price in cents (e.g. 15000 = $150.00)" required>
+            <input type="number" name="stock_qty" placeholder="Stock quantity" required>
+            <button type="submit">Add product</button>
+        </form>
+    </div>
+</body>
+</html>

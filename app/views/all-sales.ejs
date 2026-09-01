@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>POS Demo — All Sales</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .meta { color: #666; font-size: 0.9rem; }
+        .items { margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: #444; }
+        a.button { background: #111; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+        button.danger { background: #b3261e; color: #fff; border: none; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+        .voided { opacity: 0.5; }
+        .badge { font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: #eee; }
+        .row-top { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🧾 All Sales</h1>
+        <a class="button" href="/manager">Back to dashboard</a>
+    </header>
+
+    <% if (sales.length === 0) { %>
+        <p class="meta">No sales yet.</p>
+    <% } %>
+
+    <% sales.forEach(s => { %>
+        <div class="card <%= s.status === 'VOIDED' ? 'voided' : '' %>">
+            <div class="row-top">
+                <div>
+                    <strong>Sale #<%= s.id %></strong>
+                    <span class="badge"><%= s.status %></span>
+                    <div class="meta"><%= s.cashier_email %> · <%= new Date(s.created_at).toLocaleString() %> · $<%= (s.total_cents / 100).toFixed(2) %></div>
+                </div>
+                <% if (s.status === 'COMPLETED') { %>
+                    <form method="POST" action="/sales/<%= s.id %>/void" onsubmit="return confirm('Void sale #<%= s.id %>?')">
+                        <button type="submit" class="danger">Void</button>
+                    </form>
+                <% } %>
+            </div>
+            <ul class="items">
+                <% s.items.forEach(i => { %>
+                    <li><%= i.product_name %> × <%= i.quantity %> ($<%= (i.unit_price_cents / 100).toFixed(2) %> each)</li>
+                <% }) %>
+            </ul>
+        </div>
+    <% }) %>
+</body>
+</html>

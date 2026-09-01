@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>POS Demo — Sales Report</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .stats { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .stat { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; flex: 1; text-align: center; }
+        .stat .value { font-size: 1.6rem; font-weight: bold; }
+        .stat .label { color: #666; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        a.button { background: #111; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📊 Sales Report</h1>
+        <a class="button" href="/manager">Back to dashboard</a>
+    </header>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="value">$<%= (totals.revenue_cents / 100).toFixed(2) %></div>
+            <div class="label">Revenue</div>
+        </div>
+        <div class="stat">
+            <div class="value"><%= totals.completed_count %></div>
+            <div class="label">Completed sales</div>
+        </div>
+        <div class="stat">
+            <div class="value"><%= totals.voided_count %></div>
+            <div class="label">Voided sales</div>
+        </div>
+    </div>
+
+    <h2>Top products</h2>
+    <table>
+        <thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th></tr></thead>
+        <tbody>
+            <% topProducts.forEach(p => { %>
+                <tr>
+                    <td><%= p.name %></td>
+                    <td><%= p.units_sold %></td>
+                    <td>$<%= (p.revenue_cents / 100).toFixed(2) %></td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</body>
+</html>
