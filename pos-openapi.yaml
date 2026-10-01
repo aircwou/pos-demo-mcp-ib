@@ -1,0 +1,214 @@
+openapi: 3.0.3
+info:
+  title: POS Demo API
+  description: >
+    Point-of-sale demo, authenticated via Dex/TOKEN_EXCHANGE. Two roles with
+    genuinely different permissions: Cashier (browse, ring up sales, own
+    history) and Manager (all of that, plus product management, all sales,
+    void, and reporting).
+  version: 1.0.0
+
+servers:
+  - url: https://posdemo.authio.ai
+    description: Production (tunneled)
+
+tags:
+  - name: products
+    description: Product catalog
+  - name: sales
+    description: Ringing up and reviewing sales
+  - name: reports
+    description: Manager-only reporting
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        sku: { type: string }
+        name: { type: string }
+        category: { type: string }
+        price_cents: { type: integer }
+        stock_qty: { type: integer }
+    SaleItem:
+      type: object
+      properties:
+        product_name: { type: string }
+        quantity: { type: integer }
+        unit_price_cents: { type: integer }
+    Sale:
+      type: object
+      properties:
+        id: { type: integer }
+        cashier_email: { type: string }
+        status: { type: string, enum: [COMPLETED, VOIDED] }
+        total_cents: { type: integer }
+        created_at: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SaleItem' }
+
+paths:
+  /products:
+    get:
+      tags: [products]
+      operationId: listProducts
+      summary: Browse the product catalog
+      description: Any authenticated user — Cashiers need this to ring up a sale.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Product' }
+
+    post:
+      tags: [products]
+      operationId: addProduct
+      summary: Add a new product to the catalog
+      description: Manager only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name, category, price_cents]
+              properties:
+                sku: { type: string }
+                name: { type: string }
+                category: { type: string }
+                price_cents: { type: integer }
+                stock_qty: { type: integer }
+      responses:
+        '201':
+          description: Product added
+
+  /sales:
+    post:
+      tags: [sales]
+      operationId: ringUpSale
+      summary: Ring up a sale
+      description: Any authenticated user — the core Cashier action.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [product_id, quantity]
+                    properties:
+                      product_id: { type: integer }
+                      quantity: { type: integer }
+      responses:
+        '201':
+          description: Sale completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saleId: { type: integer }
+                  totalCents: { type: integer }
+
+    get:
+      tags: [sales]
+      operationId: listAllSales
+      summary: List every sale, from every cashier
+      description: Manager only.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Sale' }
+
+  /sales/mine:
+    get:
+      tags: [sales]
+      operationId: listMySales
+      summary: List the current user's own sales
+      description: Any authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of the caller's own sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Sale' }
+
+  /sales/{id}/void:
+    post:
+      tags: [sales]
+      operationId: voidSale
+      summary: Void a completed sale
+      description: Manager only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Numeric sale ID to void
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Sale voided
+
+  /reports/summary:
+    get:
+      tags: [reports]
+      operationId: getSalesReport
+      summary: Revenue totals and top products
+      description: Manager only.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Summary report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totals:
+                    type: object
+                    properties:
+                      completed_count: { type: integer }
+                      voided_count: { type: integer }
+                      revenue_cents: { type: integer }
+                  topProducts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        units_sold: { type: integer }
+                        revenue_cents: { type: integer }

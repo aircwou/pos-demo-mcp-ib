@@ -17,6 +17,7 @@ async function main() {
     app.set("view engine", "ejs");
     app.set("views", path.join(__dirname, "..", "views"));
     app.use(express.urlencoded({ extended: false }));
+    app.use(express.json());
     app.use(
         session({
             store: new PgSession({ pool, tableName: "session" }),
@@ -32,7 +33,7 @@ async function main() {
     app.get("/", requireAuth, async (req, res, next) => {
         try {
             const { rows: products } = await pool.query("SELECT * FROM products ORDER BY category, name");
-            res.render("checkout", { products, user: req.session.user });
+            res.render("checkout", { products, user: req.user || req.session?.user });
         } catch (err) {
             next(err);
         }
@@ -44,7 +45,7 @@ async function main() {
     app.get("/manager", requireAuth, requireRole("MANAGER"), async (req, res, next) => {
         try {
             const { rows: products } = await pool.query("SELECT * FROM products ORDER BY category, name");
-            res.render("manager", { products, user: req.session.user });
+            res.render("manager", { products, user: req.user || req.session?.user });
         } catch (err) {
             next(err);
         }

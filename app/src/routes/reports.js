@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.get("/summary", async (req, res, next) => {
     try {
+        const user = req.user || req.session?.user;
         const { rows: totals } = await pool.query(
             `SELECT
                  count(*) FILTER (WHERE status = 'COMPLETED') AS completed_count,
@@ -24,7 +25,10 @@ router.get("/summary", async (req, res, next) => {
              ORDER BY units_sold DESC
              LIMIT 5`,
         );
-        res.render("report", { totals: totals[0], topProducts, user: req.session.user });
+        if (req.headers.authorization || !req.accepts("html") || req.headers.accept?.includes("application/json")) {
+            return res.json({ totals: totals[0], topProducts });
+        }
+        res.render("report", { totals: totals[0], topProducts, user });
     } catch (err) {
         next(err);
     }

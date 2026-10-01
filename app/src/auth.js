@@ -105,19 +105,116 @@ function registerAuthRoutes(app) {
     });
 }
 
-function requireAuth(req, res, next) {
-    if (!req.session.user) return res.redirect("/login");
-    next();
+async function verifyBearerToken(token) {
+    if (!token) return null;
+
+    // Verify Bearer token directly against Dex's OIDC userinfo endpoint
+    if (client) {
+        try {
+            const userinfo = await client.userinfo(token);
+            if (userinfo && userinfo.email) {
+                return {
+                    email: userinfo.email,
+                    sub: userinfo.sub,
+                    name: userinfo.name || null,
+                    picture: userinfo.picture || null,
+                };
+            }
+        } catch (err) {
+            console.debug("[auth] Dex OIDC token verification failed:", err.message);
+        }
+    }
+
+    return null;
+}
+
+async function requireAuth(req, res, next) {
+    // 1. Session-based auth (browser)
+    if (req.session?.user) {
+        req.user = req.session.user;
+        return next();
+    }
+
+    // 2. Bearer token auth (API / MCPHub / AI agent)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.slice(7).trim();
+        if (!token) {
+            return res.status(401).json({ error: "Empty bearer token" });
+        }
+
+        try {
+            const claims = await verifyBearerToken(token);
+            if (!claims || !claims.email) {
+                return res.status(401).json({ error: "Invalid or expired token" });
+            }
+
+            const { pool } = require("./db");
+            const { rows } = await pool.query(
+                "SELECT email, sub, name, role FROM users WHERE email = $1",
+                [claims.email],
+            );
+
+            if (rows.length === 0) {
+                return res.status(403).json({
+                    error: `${claims.email} is not a registered user of this POS demo.`,
+                });
+            }
+
+            if (claims.sub && !rows[0].sub) {
+                await pool.query(
+                    "UPDATE users SET sub = $1, name = COALESCE(name, $2) WHERE email = $3",
+                    [claims.sub, claims.name ?? null, claims.email],
+                );
+            }
+
+            req.user = {
+                sub: claims.sub || rows[0].sub,
+                email: rows[0].email,
+                name: rows[0].name || claims.name,
+                picture: claims.picture || null,
+                role: rows[0].role,
+            };
+
+            if (req.session) {
+                req.session.user = req.user;
+            }
+
+            return next();
+        } catch (err) {
+            console.error("[auth] Bearer token processing error:", err);
+            return res.status(401).json({ error: "Authentication failed" });
+        }
+    }
+
+    // 3. Unauthenticated request
+    if (req.accepts("json") && !req.accepts("html")) {
+        return res.status(401).json({ error: "Authentication required" });
+    }
+
+    res.redirect("/login");
 }
 
 function requireRole(role) {
     return (req, res, next) => {
-        if (!req.session.user) return res.redirect("/login");
-        if (req.session.user.role !== role) {
+        const user = req.user || req.session?.user;
+        if (!user) {
+            if (req.accepts("json") && !req.accepts("html")) {
+                return res.status(401).json({ error: "Authentication required" });
+            }
+            return res.redirect("/login");
+        }
+
+        if (user.role !== role) {
+            if (req.accepts("json") && !req.accepts("html")) {
+                return res.status(403).json({ error: `This endpoint requires the ${role} role.` });
+            }
             return res.status(403).send(`This page requires the ${role} role.`);
         }
+
         next();
     };
 }
 
-module.exports = { initOidcClient, registerAuthRoutes, requireAuth, requireRole };
+module.exports = { initOidcClient, registerAuthRoutes, requireAuth, requireRole, verifyBearerToken };
+

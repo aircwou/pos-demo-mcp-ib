@@ -11,9 +11,10 @@ const router = express.Router();
 // Body: { items: [{ product_id, quantity }, ...] } (JSON) — checkout.ejs
 // posts this via fetch, not a plain HTML form, since it needs to send an
 // array of line items.
-router.post("/", express.json(), async (req, res, next) => {
+router.post("/", async (req, res, next) => {
     const client = await pool.connect();
     try {
+        const user = req.user || req.session?.user;
         const items = Array.isArray(req.body.items) ? req.body.items : [];
         if (items.length === 0) {
             return res.status(400).json({ error: "Cart is empty" });
@@ -49,7 +50,7 @@ router.post("/", express.json(), async (req, res, next) => {
 
         const { rows: saleRows } = await client.query(
             "INSERT INTO sales (cashier_email, total_cents) VALUES ($1, $2) RETURNING id",
-            [req.session.user.email, totalCents],
+            [user.email, totalCents],
         );
         const saleId = saleRows[0].id;
 
@@ -77,6 +78,7 @@ router.post("/", express.json(), async (req, res, next) => {
 // Own sales history — any authenticated user.
 router.get("/mine", async (req, res, next) => {
     try {
+        const user = req.user || req.session?.user;
         const { rows: sales } = await pool.query(
             `SELECT s.*, COALESCE(json_agg(json_build_object(
                  'product_name', p.name, 'quantity', si.quantity, 'unit_price_cents', si.unit_price_cents
@@ -86,9 +88,12 @@ router.get("/mine", async (req, res, next) => {
              LEFT JOIN products p ON p.id = si.product_id
              WHERE s.cashier_email = $1
              GROUP BY s.id ORDER BY s.created_at DESC`,
-            [req.session.user.email],
+            [user.email],
         );
-        res.render("my-sales", { sales, user: req.session.user });
+        if (req.headers.authorization || !req.accepts("html") || req.headers.accept?.includes("application/json")) {
+            return res.json(sales);
+        }
+        res.render("my-sales", { sales, user });
     } catch (err) {
         next(err);
     }
@@ -97,6 +102,7 @@ router.get("/mine", async (req, res, next) => {
 // All sales — Manager only.
 router.get("/", requireRole("MANAGER"), async (req, res, next) => {
     try {
+        const user = req.user || req.session?.user;
         const { rows: sales } = await pool.query(
             `SELECT s.*, COALESCE(json_agg(json_build_object(
                  'product_name', p.name, 'quantity', si.quantity, 'unit_price_cents', si.unit_price_cents
@@ -106,7 +112,10 @@ router.get("/", requireRole("MANAGER"), async (req, res, next) => {
              LEFT JOIN products p ON p.id = si.product_id
              GROUP BY s.id ORDER BY s.created_at DESC`,
         );
-        res.render("all-sales", { sales, user: req.session.user });
+        if (req.headers.authorization || !req.accepts("html") || req.headers.accept?.includes("application/json")) {
+            return res.json(sales);
+        }
+        res.render("all-sales", { sales, user });
     } catch (err) {
         next(err);
     }
@@ -121,6 +130,9 @@ router.post("/:id/void", requireRole("MANAGER"), async (req, res, next) => {
             "UPDATE sales SET status = 'VOIDED', voided_at = now() WHERE id = $1 AND status = 'COMPLETED'",
             [Number(req.params.id)],
         );
+        if (req.headers.authorization || !req.accepts("html") || req.headers.accept?.includes("application/json")) {
+            return res.json({ success: true, id: Number(req.params.id), status: "VOIDED" });
+        }
         res.redirect("/sales");
     } catch (err) {
         next(err);
